@@ -98,7 +98,7 @@
                 <div class="subheading mb-3">Example:</div>
                 <pre class="prettyprint lang-java">
 public class MainActivity extends AppCompatActivity {
-    // imports and other codes here
+    // other codes here
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -156,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
               <div class="subheading mb-3">Example:</div>
               <pre class="prettyprint lang-java">
 public class CloudSheetFragment extends BottomSheetDialogFragment {
-    // imports and other codes here
+    // other codes here
 
     @Override
     public void setupDialog(Dialog dialog, int style) {
@@ -193,7 +193,7 @@ public class CloudSheetFragment extends BottomSheetDialogFragment {
             <div class="subheading mb-3">Example:</div>
             <pre class="prettyprint lang-java">
 public class SettingsActivity extends AppCompatActivity {
-    // imports and other codes here
+    // other codes here
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -254,7 +254,7 @@ public class SettingsActivity extends AppCompatActivity {
             <div class="subheading mb-3">Example:</div>
             <pre class="prettyprint lang-java">
 public class ProfileAdapter extends ArrayAdapter&lt;User> {
-    // imports and other codes here
+    // other codes here
 
     public DrawerAdapter(Context context, ArrayList&lt;User> users) {
         // ...
@@ -291,6 +291,96 @@ public class ProfileAdapter extends ArrayAdapter&lt;User> {
               <h3 class="mb-0">Absence of an Architecture</h3>
               <p align="justify">This smell emerges when one cannot easily identify how the components are organized.
                 Developers cannot identify whether the application makes use of <i><b>Model View Controller (MVC)</i></b>, <i><b>Model View Presenter (MVP)</i></b>, or <i><b>Model View ViewModel (MVVM)</i></b>.</p>
+            <div class="subheading mb-3">Example:</div>
+            <pre class="prettyprint lang-java">
+public class MainMenuActivity extends BaseActivity {
+    // other codes here
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_main_menu);
+
+        if (getIntent().getExtras() != null) {
+            visitorId = getIntent().getExtras().getInt(Constants.RegisterVisitor.ARGUMENT_VISITOR_ID);
+        }
+
+        setupToolbar();
+        setListeners();
+        if (!hasGpsPermissionGranted) {
+            doLogin();
+        }
+        // ...
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        name = PreferencesUtil.getString(this, Constants.NAME, "");
+        isVisitor = PreferencesUtil.isVisitor(binding.getRoot().getContext());
+
+        user = PreferencesUtil.getUser(this);
+        if (user != null && !isVisitor) {
+            doLimit();
+        }
+
+        if (!TextUtils.isEmpty(name) && !isVisitor) {
+            String[] nameSplit = name.split(Constants.WHITESPACE);
+            name = nameSplit[0] + Constants.WHITESPACE + nameSplit[1];
+            binding.includeAccountDetails.textviewUserName.setText(name);
+        } else {
+            binding.includeAccountDetails.textviewUserName.setText(R.string.visitor_default_name);
+        }
+
+        // ...
+    }
+
+    private void doLogin() {
+        final Intent intent = getIntent();
+        if (intent.hasExtra(Constants.SharedPreferences.CPF) && intent.hasExtra(Constants.SharedPreferences.PASSWORD)) {
+            userCpf = intent.getStringExtra(Constants.SharedPreferences.CPF);
+            userPassword = intent.getStringExtra(Constants.SharedPreferences.PASSWORD);
+            loginData = createLoginData(userCpf, userPassword);
+
+            showProgress(context.getString(R.string.dialog_message_do_login));
+            repository.doLogin(loginData)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Subscriber&lt;LoginResponse>() {
+                    @Override
+                    public void onCompleted() {}
+
+                    @Override
+                    public void onError(Throwable throwable) {
+                        dismissProgress();
+                        ErrorManager errorManager = new ErrorManager(throwable);
+                        Exception exception = errorManager.parseError();
+                        if (exception instanceof ForbiddenException) {
+                            showForbidden();
+                        } else {
+                            showError(exception.getMessage());
+                        }
+                    }
+
+                    @Override
+                    public void onNext(LoginResponse loginResponse) {
+                        User user = loginResponse.getUser();
+                        if (user != null) {
+                            saveUser(loginResponse.getUser(), loginData.getPassword());
+                        }
+                    }
+                });
+        } else {
+            loadSettings();
+        }
+    }
+
+    public void checkLimitResponseSuccess(LimitResponse limitResponse) {
+        limit = limit < 0 ? 0 : limitResponse.getValue();
+        binding.includeAccountDetails.textviewBalanceValue.setText(CurrencyUtil.convertToCurrency(String.valueOf(getlimit())));
+    }
+
+    // other codes here
+}</pre>
                 <div class="subheading mb-3">Refactoring suggestion:</div>
                 <p align="justify">Try to break all artifacts in order to follow at least one architecture such as: <i><b>Model View Controller (MVC)</i></b>, <i><b>Model View Presenter (MVP)</i></b>, or <i><b>Model View ViewModel (MVVM)</i></b></p>
             </div>
@@ -301,8 +391,9 @@ public class ProfileAdapter extends ArrayAdapter&lt;User> {
               <h3 class="mb-0">Excessive Use of Fragments</h3>
               <p align="justify">This smell emerges when <i><b>Fragments</i></b> are used without an explicit need.
                 Examples are applications that do not (need not to) support tablets, or when <i><b>Fragments</i></b> are used in only a single screen of the app.</p>
-                <div class="subheading mb-3">Refactoring suggestion:</div>
-                <p align="justify">It is not a good practice to use a lot of <i><b>Fragments</i></b>. Transform some <i><b>Fragments</i></b> into <i><b>Activities</i></b> and the Try to use <i><b>Fragments</i></b> just if <i><b>View Pagers</i></b>.</p>
+
+              <div class="subheading mb-3">Refactoring suggestion:</div>
+              <p align="justify">It is not a good practice to use a lot of <i><b>Fragments</i></b>. Transform some <i><b>Fragments</i></b> into <i><b>Activities</i></b> and try to use <i><b>Fragments</i></b> just with <i><b>View Pagers</i></b>.</p>
             </div>
           </div>
 
@@ -310,6 +401,29 @@ public class ProfileAdapter extends ArrayAdapter&lt;User> {
             <div class="resume-content mr-auto">
               <h3 class="mb-0">UI Component Doing I/O</h3>
               <p align="justify"><i><b>Activities</i></b>, <i><b>Fragments</i></b>, and <i><b>Adapters</i></b> performing I/O operations, such as database and file access, cause this smell.</p>
+            <div class="subheading mb-3">Example:</div>
+            <pre class="prettyprint lang-java">
+public class MainActivity extends AppCompatActivity {
+    // other codes here
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        TextView aboutText = (TextView) findViewById(R.id.about);
+        aboutText.setMovementMethod(LinkMovementMethod.getInstance());
+
+        User user = userRepository.getUser();
+
+        SharedPreferences sharedPreferences = activity.getSharedPreferences(SHARED_TUTO, Context.MODE_PRIVATE);
+        sharedPreferences.edit().putString(USER_NAME, user.getName()).apply();
+
+        // ...
+    }
+
+    // other codes here
+}</pre>
                 <div class="subheading mb-3">Refactoring suggestion:</div>
                 <p align="justify">Remove all I/O direct access from <i><b>Activities</i></b>, <i><b>Fragments</i></b>, and <i><b>Adapters</i></b>.</p>
             </div>
@@ -341,7 +455,7 @@ public class ProfileAdapter extends ArrayAdapter&lt;User> {
             <div class="subheading mb-3">Example:</div>
             <pre class="prettyprint lang-java">
 public class CityWeatherAdapter extends RecyclerView.Adapter&lt;CityWeatherAdapter.ViewHolder> {
-    // imports and other codes here
+    // other codes here
 
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
@@ -445,6 +559,23 @@ public class CityWeatherAdapter extends RecyclerView.Adapter&lt;CityWeatherAdapt
               <div class="resume-content mr-auto">
                 <h3 class="mb-0">Magic Resource</h3>
                 <p align="justify">A smell that results when resources (e.g., <i><b>layout</i></b>, <i><b>string</i></b>, and <i><b>style</i></b>) are hard-coded instead of pointing to an existing resource.</p>
+            <div class="subheading mb-3">Example:</div>
+            <pre class="prettyprint lang-java">
+&lt;?xml version="1.0" encoding="utf-8"?>
+&lt;RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    &lt;TextView
+        android:id="@+id/txt_warning_message"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:text="Ops! Seens that you don't have any item to show yet!" />
+
+&lt;/RelativeLayout></pre>
                   <div class="subheading mb-3">Refactoring suggestion:</div>
                   <p align="justify">Remove all embedded strings and colors from <i><b>android:text</i></b> and
                     <i><b>android:.*Color.*</i></b> attribute, respectively.
@@ -457,6 +588,54 @@ public class CityWeatherAdapter extends RecyclerView.Adapter&lt;CityWeatherAdapt
               <div class="resume-content mr-auto">
                 <h3 class="mb-0">Deep Nested Layout</h3>
                 <p align="justify">Deep nesting when constructing layout resources was considered a code smell.</p>
+            <div class="subheading mb-3">Example:</div>
+            <pre class="prettyprint lang-java">
+&lt;RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    &lt;RelativeLayout
+        android:id="@+id/main_tool_bar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/activity_toolbar_height"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true" >
+
+        &lt;HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/activity_toolbar_height"
+            android:layout_alignParentTop="true"
+            android:background="?attr/colorPrimary"
+            android:paddingBottom="@dimen/activity_palette_vertical_padding"
+            android:paddingTop="@dimen/activity_palette_vertical_padding" >
+
+            &lt;LinearLayout
+                android:id="@+id/main_palette_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal" >
+
+                &lt;LinearLayout
+                    style="@style/DialogTextEditBackgroundStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
+                    &lt;com.mkulesh.micromath.widgets.CustomEditText
+                        android:id="@+id/hidden_edit_text"
+                        style="@style/DialogTextEditStyle"
+                        android:layout_width="@dimen/activity_toolbar_height"
+                        android:layout_height="@dimen/activity_hidden_text_height"
+                        android:paddingTop="3dp" />
+                &lt;/LinearLayout>
+
+            &lt;/LinearLayout>
+        &lt;/HorizontalScrollView>
+
+        &lt;!-- more code here -->
+    &lt;/RelativeLayout>
+&lt;/RelativeLayout></pre>
                   <div class="subheading mb-3">Refactoring suggestion:</div>
                   <p align="justify">Remove hierarchies from long views, that is, deeply nested structures should not exist.</p>
               </div>
@@ -477,6 +656,66 @@ public class CityWeatherAdapter extends RecyclerView.Adapter&lt;CityWeatherAdapt
               <div class="resume-content mr-auto">
                 <h3 class="mb-0">Long or Repeated Layout</h3>
                 <p align="justify">The code smell emerges when long or duplicated <i><b>layout</i></b> resources (instead of good reuse) occur in the source code.</p>
+            <div class="subheading mb-3">Example:</div>
+            <pre class="prettyprint lang-java">
+&lt;?xml version="1.0" encoding="utf-8"?>
+&lt;RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    &lt;RelativeLayout
+      android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        &lt;TextView
+            android:id="@+id/txt_name"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:text="Nome completo:" />
+
+        &lt;EditText
+            android:id="@+id/edt_name"
+            android:layout_width="match_parent"
+            android:layout_height="40dp" />
+    &lt;/RelativeLayout>
+
+    &lt;RelativeLayout
+      android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        &lt;TextView
+            android:id="@+id/txt_surname"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:text="Nome completo:" />
+
+        &lt;EditText
+            android:id="@+id/edt_surname"
+            android:layout_width="match_parent"
+            android:layout_height="40dp" />
+    &lt;/RelativeLayout>
+
+    &lt;RelativeLayout
+      android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        &lt;TextView
+            android:id="@+id/txt_email"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:text="Nome completo:" />
+
+        &lt;EditText
+            android:id="@+id/edt_email"
+            android:layout_width="match_parent"
+            android:layout_height="40dp" />
+    &lt;/RelativeLayout>
+
+    &lt;!-- more code here -->
+&lt;/RelativeLayout></pre>
                   <div class="subheading mb-3">Refactoring suggestion:</div>
                   <p align="justify">Add include statements. It is a good practice to use includes for some similar layout piece</p>
               </div>
@@ -526,6 +765,172 @@ public class CityWeatherAdapter extends RecyclerView.Adapter&lt;CityWeatherAdapt
                 <p align="justify">Android developers often choose to define the style of an UI element directly into the layout file.
                   However, this might lead to unnecessary duplication (e.g., the same complex style appears in different components).
                   The existence of duplicated style definitions in different components is an indication of this code smell.</p>
+            <div class="subheading mb-3">Example:</div>
+            <pre class="prettyprint lang-java">
+&lt;LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="@dimen/widget_margin"
+    android:orientation="horizontal"
+    android:weightSum="3"
+    android:background="@drawable/rounded_corner"
+    android:previewImage="@drawable/weather_widget_preview"
+    android:minHeight="40dp"
+    android:minWidth="250dp">
+
+    &lt;ImageView
+        android:id="@+id/widget_city_weather_image_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:adjustViewBounds="true"
+        android:scaleType="centerCrop"
+        android:src="@mipmap/weather_icon_sunny_with_clouds"
+        android:layout_weight="2"/>
+
+    &lt;GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:columnCount="4"
+        android:layout_weight="1"
+        android:paddingStart="11dp">
+
+        &lt;TextView
+            android:id="@+id/widget_city_name"
+            android:layout_width="wrap_content"
+            android:text="CityName"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="11dp"
+            android:textSize="18dp"
+            android:layout_column="0"
+            android:layout_row="0"
+            android:layout_columnSpan="4"
+            android:textStyle="bold"
+            android:textColor="@color/black"/>
+
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:text="Temp:"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="11dp"
+            android:textSize="12dp"
+            android:layout_column="0"
+            android:layout_row="1"
+            android:textColor="@color/black"/>
+
+        &lt;TextView
+            android:id="@+id/widget_city_weather_temperature"
+            android:layout_width="wrap_content"
+            android:text="-273,15°C"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="11dp"
+            android:textSize="12dp"
+            android:layout_column="1"
+            android:layout_row="1"
+            android:layout_gravity="end"
+            android:textColor="@color/black"/>
+
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:text="Hum:"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="11dp"
+            android:textSize="12dp"
+            android:layout_column="0"
+            android:layout_row="2"
+            android:textColor="@color/black"/>
+
+        &lt;TextView
+            android:id="@+id/widget_city_weather_humidity"
+            android:layout_width="wrap_content"
+            android:text="42%"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="11dp"
+            android:textSize="12dp"
+            android:layout_column="1"
+            android:layout_row="2"
+            android:layout_gravity="end"
+            android:textColor="@color/black"/>
+
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:text="Rise:"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="11dp"
+            android:textSize="12dp"
+            android:layout_column="2"
+            android:layout_row="1"
+            android:textColor="@color/black"/>
+
+        &lt;TextView
+            android:id="@+id/widget_city_weather_rise"
+            android:layout_width="wrap_content"
+            android:text="06:00"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="11dp"
+            android:textSize="12dp"
+            android:layout_column="3"
+            android:layout_row="1"
+            android:textColor="@color/black"/>
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:text="Set:"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="11dp"
+            android:textSize="12dp"
+            android:layout_column="2"
+            android:layout_row="2"
+            android:layout_gravity="end"
+            android:textColor="@color/black"/>
+
+        &lt;TextView
+            android:id="@+id/widget_city_weather_set"
+            android:layout_width="wrap_content"
+            android:text="18:00"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="11dp"
+            android:textSize="12dp"
+            android:layout_column="3"
+            android:layout_row="2"
+            android:textColor="@color/black"/>
+
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:text="Wind:"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="11dp"
+            android:textSize="12dp"
+            android:layout_column="0"
+            android:layout_row="3"
+            android:textColor="@color/black"/>
+
+        &lt;TextView
+            android:id="@+id/widget_city_weather_wind"
+            android:layout_width="wrap_content"
+            android:text="42 km/h"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="11dp"
+            android:textSize="12dp"
+            android:layout_column="1"
+            android:layout_row="3"
+            android:layout_gravity="end"
+            android:textColor="@color/black"/>
+
+    &lt;/GridLayout>
+&lt;/LinearLayout></pre>
                   <div class="subheading mb-3">Refactoring suggestion:</div>
                   <p align="justify">Remove all duplicate style attributes.</p>
               </div>
@@ -537,6 +942,36 @@ public class CityWeatherAdapter extends RecyclerView.Adapter&lt;CityWeatherAdapt
                 <p align="justify">Layout resources should only be responsible for presenting data.
                   The smell appears when these resources also configure the listener that will respond to its events, such as <i><b>onClick</i></b>.
                   Such decisions make it harder for developers to identify which listeners are used.</p>
+            <div class="subheading mb-3">Example:</div>
+            <pre class="prettyprint lang-java">
+&lt;?xml version="1.0" encoding="utf-8"?>
+&lt;RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    &lt;TextView
+        android:id="@+id/txt_email"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Email:" />
+
+    &lt;EditText
+        android:id="@+id/edt_email"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    &lt;Button
+        android:id="@+id/button_confirm"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/button_positive_drawable"
+        android:text="@string/ok"
+        android:onClick="subscribe" />
+
+&lt;/RelativeLayout></pre>
                   <div class="subheading mb-3">Refactoring suggestion:</div>
                   <p align="justify">Remove the <i><b>View</i></b> (<i><b>Button</i></b>, <i><b>TextView</i></b>,
                     <i><b>CheckBox</i></b>, etc) element that contains the <i><b>android:onClick</i></b> attribute in the XML and add <i><b>setOnClickListener</i></b> in the corresponding <i><b>Activity</i></b> or
