@@ -450,8 +450,7 @@ public class MainActivity extends AppCompatActivity {
             <div class="resume-content mr-auto">
               <h3 class="mb-0">Flex Adapter</h3>
               <p align="justify"><i><b>Adapters</i></b> should be responsible for populating a view from a single object.
-                The code smell emerges when <i><b>Adapters</i></b> contain business logic and make business decisions.
-                As we discussed in the <i><b>Brain UI Component smell</i></b>, UI logic and business rules should be apart from each other.</p>
+                The code smell emerges when <i><b>Adapters</i></b> contains logic and make decisions (ifs or switchs) or calculations in the method responsible to load the view.
             <div class="subheading mb-3">Example:</div>
             <pre class="prettyprint lang-java">
 public class CityWeatherAdapter extends RecyclerView.Adapter&lt;CityWeatherAdapter.ViewHolder> {
