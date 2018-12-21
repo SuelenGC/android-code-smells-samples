@@ -21,6 +21,8 @@
     <!-- Custom styles for this template -->
     <link href="css/resume.min.css" rel="stylesheet">
 
+    <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+
   </head>
 
   <body id="page-top">
@@ -96,6 +98,52 @@
                 <p align="justify">Only code related to the UI in <i><b>Activities</b></i>, <i><b>Fragments</b></i>, <i><b>Adapters</b></i>,
                   and <i><b>Listeners</b></i>.
                   Break all business logic into two or more classes.</p>
+
+                <div class="subheading mb-3">Smelly Sample:</div>
+                <pre class="prettyprint lang-java">
+public class MainActivity extends AppCompatActivity {
+    // imports and other codes here
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        CardRepositoty repository = new CardRepositoty();
+        repository.checkCardLimit()
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Subscriber<LimitResponse>() {
+                    @Override
+                    public void onCompleted() {
+                        dismissProgress();
+                    }
+
+                    @Override
+                    public void onError(Throwable throwable) {
+                        dismissProgress();
+                        ErrorManager errorManager = new ErrorManager(throwable);
+                        Exception exception = errorManager.parseError();
+                        if (exception instanceof ForbiddenException) {
+                            showForbidden();
+                        } else {
+                            showError(exception.getMessage());
+                        }
+                    }
+
+                    @Override
+                    public void onNext(LimitResponse limitResponse) {
+                        limit = limitResponse.getDisponibGlobalCredito();
+
+                        if (limit < 0) {
+                            binding.limit.setText("R$ 0,00");
+                        } else {
+                            binding.limit.setText(new DecimalUtil().convertToReal(limit));
+                        }
+                    }
+                });
+    }
+
+    // other methods here...
+}</pre>
             </div>
           </div>
 
