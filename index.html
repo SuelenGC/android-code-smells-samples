@@ -94,12 +94,8 @@
                 Executing any business logic, on the other hand, should happen somewhere else.
                 The UI layer should not contain details that are related to the domain.
                 The existence of code related to business logic, I/O operations, conversion of data, or static fields in these elements are signs of code smell.</p>
-                <div class="subheading mb-3">Refactoring suggestion:</div>
-                <p align="justify">Only code related to the UI in <i><b>Activities</b></i>, <i><b>Fragments</b></i>, <i><b>Adapters</b></i>,
-                  and <i><b>Listeners</b></i>.
-                  Break all business logic into two or more classes.</p>
 
-                <div class="subheading mb-3">Smelly Sample:</div>
+                <div class="subheading mb-3">Example:</div>
                 <pre class="prettyprint lang-java">
 public class MainActivity extends AppCompatActivity {
     // imports and other codes here
@@ -111,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
         CardRepositoty repository = new CardRepositoty();
         repository.checkCardLimit()
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Subscriber<LimitResponse>() {
+                .subscribe(new Subscriber&lt;LimitResponse>() {
                     @Override
                     public void onCompleted() {
                         dismissProgress();
@@ -142,8 +138,12 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
-    // other methods here...
+    // other codes here
 }</pre>
+                <div class="subheading mb-3">Refactoring suggestion:</div>
+                <p align="justify">Only code related to the UI in <i><b>Activities</b></i>, <i><b>Fragments</b></i>, <i><b>Adapters</b></i>,
+                  and <i><b>Listeners</b></i>.
+                  Break all business logic into two or more classes.</p>
             </div>
           </div>
 
@@ -153,6 +153,27 @@ public class MainActivity extends AppCompatActivity {
               <p align="justify"><i><b>Fragments</b></i>, <i><b>Adapters</i></b>, and <i><b>Listeners</i></b>,
                 in order to be reused, should not have direct reference to who uses them.
                 The existence of direct reference to <i><b>Activities</i></b> or <i><b>Fragments</i></b> in these elements is an evidence of code smell.</p>
+              <div class="subheading mb-3">Example:</div>
+              <pre class="prettyprint lang-java">
+public class CloudSheetFragment extends BottomSheetDialogFragment {
+    // imports and other codes here
+
+    @Override
+    public void setupDialog(Dialog dialog, int style) {
+        super.setupDialog(dialog, style);
+
+        rootView = getActivity().getLayoutInflater().inflate(R.layout.fragment_sheet_cloud, null);
+
+        if (((MainActivity) getActivity()).getAppTheme().equals(AppTheme.DARK)) {
+            rootView.setBackgroundColor(Utils.getColor(getContext(), R.color.holo_dark_background));
+        } else {
+            rootView.setBackgroundColor(Utils.getColor(getContext(), android.R.color.white));
+        }
+
+        dialog.setContentView(rootView);
+    }
+    // other codes here
+}</pre>
                 <div class="subheading mb-3">Refactoring suggestion:</div>
                 <p align="justify">Make the <i><b>UI</i></b> components reusable. Therefore,
                   one should avoid dependence on other components of the application.
@@ -169,6 +190,58 @@ public class MainActivity extends AppCompatActivity {
                 Second, an event handler often makes use of the business rules and the domain model of the app.
                 A less attentive developer may then write these business rules directly into the event handler (which then leads us to a possible Brain UI Component smell).
                 The use of anonymous classes or internal classes to implement Listeners to respond to user events is a sign of code smell.</p>
+            <div class="subheading mb-3">Example:</div>
+            <pre class="prettyprint lang-java">
+public class SettingsActivity extends AppCompatActivity {
+    // imports and other codes here
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_settings);
+
+        binding.currencySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean bChecked) {
+                if (bChecked) {
+                    binding.currencySwitch.setChecked(true);
+                    editor.putString("currency", "USD");
+                    editor.commit();
+                } else {
+                    binding.currencySwitch.setChecked(false);
+                    editor.putString("currency", "EUR");
+                    editor.commit();
+                }
+            }
+        });
+
+        binding.periodInput.setText(this.period);
+        binding.periodInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) { }
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                period = binding.periodInput.getText().toString();
+                if (period.equals("")) {
+                    editor.putString("period", "30");
+                    editor.commit();
+                } else {
+                    editor.putString("period", period);
+                    editor.commit();
+                }
+            }
+        });
+
+        TextView aboutText = (TextView) findViewById(R.id.about);
+        aboutText.setMovementMethod(LinkMovementMethod.getInstance());
+    }
+    // other codes here
+}</pre>
+
                 <div class="subheading mb-3">Refactoring suggestion:</div>
                 <p align="justify">Prefer to state the listeners with implements and overwrite methods than to make one set in the listener object itself.</p>
             </div>
@@ -178,6 +251,36 @@ public class MainActivity extends AppCompatActivity {
             <div class="resume-content mr-auto">
               <h3 class="mb-0">Fool Adapter</h3>
               <p align="justify">This smell is present when <i><b>Adapters</i></b> do not reuse instances of the views that represent the fields that will be populated for each item of a collection by means of the <i><b>View Holder</i></b> pattern.</p>
+            <div class="subheading mb-3">Example:</div>
+            <pre class="prettyprint lang-java">
+public class ProfileAdapter extends ArrayAdapter&lt;User> {
+    // imports and other codes here
+
+    public DrawerAdapter(Context context, ArrayList&lt;User> users) {
+        // ...
+    }
+
+    @Override
+    public View getView(final int position, View convertView, ViewGroup parent) {
+        View view = inflater.inflate(R.layout.profile_item, parent, false);
+        TextView txtName = (TextView) view.findViewById(R.id.name);
+        TextView txtSurname = (TextView) view.findViewById(R.id.surname);
+        TextView txtEmail = (TextView) view.findViewById(R.id.email);
+        ImageView imageView = (ImageView) view.findViewById(R.id.icon);
+
+        User user = (User) getItem(position);
+        txtName.setText(item.getName());
+        txtSurname.setText(item.getSurname());
+        txtEmail.setText(item.getEmail());
+        imageView.setImageDrawable(item.getIcon());
+        imageView.clearColorFilter();
+
+        // ...
+
+        return view;
+    }
+    // other codes here
+}</pre>
                 <div class="subheading mb-3">Refactoring suggestion:</div>
                 <p align="justify">It is a good practice to use the <i><b>View Holder Pattern</i></b>.</p>
             </div>
@@ -235,6 +338,68 @@ public class MainActivity extends AppCompatActivity {
               <p align="justify"><i><b>Adapters</i></b> should be responsible for populating a view from a single object.
                 The code smell emerges when <i><b>Adapters</i></b> contain business logic and make business decisions.
                 As we discussed in the <i><b>Brain UI Component smell</i></b>, UI logic and business rules should be apart from each other.</p>
+            <div class="subheading mb-3">Example:</div>
+            <pre class="prettyprint lang-java">
+public class CityWeatherAdapter extends RecyclerView.Adapter&lt;CityWeatherAdapter.ViewHolder> {
+    // imports and other codes here
+
+    @Override
+    public ViewHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
+        View view;
+        if (viewType == OVERVIEW) {
+            view = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.card_overview, viewGroup, false);
+            return new OverViewHolder(v);
+
+        } else if (viewType == DETAILS) {
+            view = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.card_details, viewGroup, false);
+            return new DetailViewHolder(v);
+
+        } else if (viewType == WEEK) {
+            view = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.card_week, viewGroup, false);
+            return new WeekViewHolder(v);
+        }
+        // ...
+    }
+
+    @Override
+    public void onBindViewHolder(ViewHolder viewHolder, final int position) {
+
+        if (viewHolder.getItemViewType() == OVERVIEW) {
+            OverViewHolder holder = (OverViewHolder) viewHolder;
+            // ...
+
+        } else if (viewHolder.getItemViewType() == DETAILS) {
+            DetailViewHolder holder = (DetailViewHolder) viewHolder;
+            // ...
+
+        } else if (viewHolder.getItemViewType() == WEEK) {
+            WeekViewHolder holder = (WeekViewHolder) viewHolder;
+            // ...
+
+        }
+        // ...
+    }
+
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        public ViewHolder(View v) {
+            super(v);
+        }
+    }
+
+    public class OverViewHolder extends ViewHolder {
+        TextView temperature;
+        ImageView weather;
+
+        public OverViewHolder(View v) {
+            super(v);
+            this.temperature = (TextView) v.findViewById(R.id.activity_city_weather_temperature);
+            this.weather = (ImageView) v.findViewById(R.id.activity_city_weather_image_view);
+        }
+    }
+
+    // others ViewHolders and codes here
+}</pre>
+
                 <div class="subheading mb-3">Refactoring suggestion:</div>
                 <p align="justify">An <i><b>Adapter</i></b> must adapt a single type of item or delegate to specialized <i><b>Adapters</i></b> --
                   remove business logic and business decisions of <i><b>Adapter</i></b>.</p>
